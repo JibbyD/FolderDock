@@ -21,6 +21,9 @@ auto-fits into the same panel with no scrollbar — the tab pills stay put eithe
   from the tab label. Unnumbered folders sort after, alphabetically.
 - The grid **auto-fits**: it picks a column count and icon size so the whole tab
   fits on screen with no scrollbar. Very full folders get smaller icons.
+- **Drag an icon to reorder it** within its tab. The order is remembered in a
+  hidden `.order` file in that tab's folder; shortcuts you add later appear at
+  the end.
 - Real 256px icons for `.exe`, `.lnk`, and `.url` (incl. Steam per-game icons),
   with a coloured first-letter tile as a fallback. Failures are logged in plain
   English to `icon_debug.log` next to the exe.
@@ -71,6 +74,13 @@ Every subfolder of `%APPDATA%\MyApps` becomes a tab:
 - Folders **without** a number come after the numbered ones, alphabetically.
 - Rename or renumber a folder whenever you like — it takes effect the next time
   you open the popup, no rebuild needed.
+
+### Reordering apps in a tab
+
+Drag an icon and drop it where you want it — the grid reflows around it as you
+move, and the new order is saved to a hidden `.order` file inside that tab's
+folder. Any shortcut you add afterwards that isn't listed there just goes to the
+end. Delete the `.order` file to go back to alphabetical.
 
 ### Opening and closing
 

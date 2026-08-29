@@ -110,6 +110,9 @@ namespace FolderDock
             }
         }
 
+        // The per-folder file that records a hand-picked icon order.
+        public const string OrderFileName = ".order";
+
         // Real files in the folder, minus hidden/system bookkeeping files like
         // desktop.ini or thumbs.db. Shared by the startup check and the window.
         public static string[] GetLaunchableItems(string folderPath)
@@ -120,6 +123,8 @@ namespace FolderDock
             var result = new List<string>();
             foreach (var file in Directory.GetFiles(folderPath))
             {
+                if (Path.GetFileName(file).StartsWith(".", StringComparison.Ordinal))
+                    continue;   // .order and any other dotfiles
                 try
                 {
                     var attr = File.GetAttributes(file);
@@ -132,8 +137,63 @@ namespace FolderDock
                 }
                 result.Add(file);
             }
-            result.Sort(StringComparer.OrdinalIgnoreCase);
+
+            ApplySavedOrder(folderPath, result);
             return result.ToArray();
+        }
+
+        // Sorts full paths by the folder's ".order" file: names listed there come
+        // first, in that order; anything not listed follows, alphabetically. So a
+        // shortcut added after you arranged a tab just lands at the end.
+        private static void ApplySavedOrder(string folderPath, List<string> files)
+        {
+            var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                string orderPath = Path.Combine(folderPath, OrderFileName);
+                if (File.Exists(orderPath))
+                {
+                    int i = 0;
+                    foreach (var line in File.ReadAllLines(orderPath))
+                    {
+                        var name = line.Trim();
+                        if (name.Length > 0 && !rank.ContainsKey(name))
+                            rank[name] = i++;
+                    }
+                }
+            }
+            catch
+            {
+                // Unreadable .order - fall back to alphabetical.
+            }
+
+            int unlisted = rank.Count;
+            files.Sort((a, b) =>
+            {
+                string na = Path.GetFileName(a), nb = Path.GetFileName(b);
+                int ra = rank.TryGetValue(na, out var xa) ? xa : unlisted;
+                int rb = rank.TryGetValue(nb, out var xb) ? xb : unlisted;
+                return ra != rb
+                    ? ra.CompareTo(rb)
+                    : string.Compare(na, nb, StringComparison.OrdinalIgnoreCase);
+            });
+        }
+
+        // Writes the hand-picked order for a folder (leaf file names, in order).
+        public static void SaveOrder(string folderPath, IEnumerable<string> fileNames)
+        {
+            try
+            {
+                string orderPath = Path.Combine(folderPath, OrderFileName);
+                if (File.Exists(orderPath))
+                    File.SetAttributes(orderPath, FileAttributes.Normal); // can't overwrite a hidden file
+                File.WriteAllLines(orderPath, fileNames);
+                File.SetAttributes(orderPath, FileAttributes.Hidden);
+            }
+            catch
+            {
+                // Best-effort - a read-only folder just won't remember the order.
+            }
         }
 
         // True if the folder itself, or any immediate subfolder, holds a shortcut.

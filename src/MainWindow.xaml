@@ -113,7 +113,10 @@
                               HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl x:Name="AppsGrid"
                                   VerticalAlignment="Center"
-                                  HorizontalAlignment="Center">
+                                  HorizontalAlignment="Center"
+                                  AllowDrop="True"
+                                  DragOver="AppsGrid_DragOver"
+                                  Drop="AppsGrid_Drop">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <UniformGrid Columns="{Binding GridColumns, ElementName=Root}"/>
@@ -125,8 +128,10 @@
                                             Margin="11,10"
                                             Cursor="Hand"
                                             Background="Transparent"
+                                            Opacity="{Binding TileOpacity}"
                                             MouseLeftButtonDown="AppIcon_Down"
-                                            MouseLeftButtonUp="AppIcon_Up">
+                                            MouseLeftButtonUp="AppIcon_Up"
+                                            MouseMove="AppIcon_Move">
                                     <Border Width="{Binding IconSize, ElementName=Root}"
                                             Height="{Binding IconSize, ElementName=Root}"
                                             CornerRadius="16"

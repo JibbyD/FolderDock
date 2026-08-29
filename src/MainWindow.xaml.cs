@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -144,9 +146,9 @@ namespace FolderDock
             return m.Success ? m.Groups[2].Value : folderName;
         }
 
-        private List<AppItem> BuildItems(string[] files)
+        private ObservableCollection<AppItem> BuildItems(string[] files)
         {
-            var items = new List<AppItem>();
+            var items = new ObservableCollection<AppItem>();
             int i = 0;
             foreach (var file in files)
             {
@@ -328,15 +330,20 @@ namespace FolderDock
         {
             e.Handled = true;
             _pressed = (sender as FrameworkElement)?.DataContext as AppItem;
+            _dragItem = _pressed as AppItem;
+            _pressPoint = e.GetPosition(this);
+            _dragging = false;
         }
 
         private void AppIcon_Up(object sender, MouseButtonEventArgs e)
         {
             e.Handled = true;
-            bool launch = (sender as FrameworkElement)?.DataContext is AppItem item
+            bool launch = !_dragging
+                          && (sender as FrameworkElement)?.DataContext is AppItem item
                           && ReferenceEquals(item, _pressed);
             var target = _pressed as AppItem;
             _pressed = null;
+            _dragItem = null;
 
             if (!launch || target == null) return;
 
@@ -351,11 +358,89 @@ namespace FolderDock
             }
             Dismiss();
         }
+
+        // --- Drag an icon to reorder it within its tab -------------------------
+
+        private Point _pressPoint;
+        private AppItem? _dragItem;
+        private bool _dragging;
+
+        private void AppIcon_Move(object sender, MouseEventArgs e)
+        {
+            if (_dragItem == null || _dragging || e.LeftButton != MouseButtonState.Pressed)
+                return;
+
+            // A bit past the system threshold, so a slightly shaky click still
+            // launches the app instead of starting a drag.
+            Point p = e.GetPosition(this);
+            if (Math.Abs(p.X - _pressPoint.X) < SystemParameters.MinimumHorizontalDragDistance * 2 &&
+                Math.Abs(p.Y - _pressPoint.Y) < SystemParameters.MinimumVerticalDragDistance * 2)
+                return;
+
+            _dragging = true;
+            _pressed = null;                 // this gesture is a drag, not a launch
+            var src = _dragItem;
+            src.Dragging = true;
+
+            try
+            {
+                DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(AppItem), src), DragDropEffects.Move);
+            }
+            finally
+            {
+                src.Dragging = false;
+                _dragItem = null;
+                PersistCurrentOrder();
+                // Let the trailing mouse-up land before we re-enable launching.
+                Dispatcher.BeginInvoke(new Action(() => _dragging = false),
+                                       System.Windows.Threading.DispatcherPriority.Input);
+            }
+        }
+
+        private void AppsGrid_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+
+            if (_selectedIndex < 0 || _selectedIndex >= _tabs.Count) return;
+            if (e.Data.GetData(typeof(AppItem)) is not AppItem drag) return;
+
+            var items = _tabs[_selectedIndex].Items;
+            int from = items.IndexOf(drag);
+            if (from < 0) return;
+
+            int to = DropIndex(e.GetPosition(AppsGrid), items);
+            if (to >= 0 && to != from)
+                items.Move(from, to);
+        }
+
+        private void AppsGrid_Drop(object sender, DragEventArgs e) => e.Handled = true;
+
+        // Which slot is the cursor over? Walk up from the hit visual to the tile
+        // bound to an AppItem; if the cursor is past the last tile, target the end.
+        private int DropIndex(Point pos, ObservableCollection<AppItem> items)
+        {
+            DependencyObject? el = VisualTreeHelper.HitTest(AppsGrid, pos)?.VisualHit;
+            while (el != null && !(el is FrameworkElement fe && fe.DataContext is AppItem))
+                el = VisualTreeHelper.GetParent(el);
+
+            if (el is FrameworkElement f && f.DataContext is AppItem over)
+                return items.IndexOf(over);
+
+            return items.Count - 1;
+        }
+
+        private void PersistCurrentOrder()
+        {
+            if (_selectedIndex < 0 || _selectedIndex >= _tabs.Count) return;
+            var tab = _tabs[_selectedIndex];
+            App.SaveOrder(tab.Path, tab.Items.Select(it => Path.GetFileName(it.Path)));
+        }
     }
 
     public class FolderTab : System.ComponentModel.INotifyPropertyChanged
     {
-        public FolderTab(string name, string path, List<AppItem> items)
+        public FolderTab(string name, string path, ObservableCollection<AppItem> items)
         {
             Name = name;
             Path = path;
@@ -364,7 +449,7 @@ namespace FolderDock
 
         public string Name { get; }
         public string Path { get; }
-        public List<AppItem> Items { get; }
+        public ObservableCollection<AppItem> Items { get; }
 
         private bool _selected;
         public bool Selected
@@ -393,7 +478,7 @@ namespace FolderDock
             PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
     }
 
-    public class AppItem
+    public class AppItem : INotifyPropertyChanged
     {
         public string Name { get; set; } = "";
         public string Path { get; set; } = "";
@@ -405,5 +490,22 @@ namespace FolderDock
 
         // No coloured square behind a real icon; only the letter fallback needs it.
         public Brush TileBackground => Icon != null ? Brushes.Transparent : FallbackColor;
+
+        private bool _dragging;
+        public bool Dragging
+        {
+            get => _dragging;
+            set
+            {
+                if (_dragging == value) return;
+                _dragging = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TileOpacity)));
+            }
+        }
+
+        // The tile fades while it's the one being dragged.
+        public double TileOpacity => _dragging ? 0.35 : 1.0;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }
