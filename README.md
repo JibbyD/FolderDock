@@ -4,7 +4,12 @@ A tiny Windows (WPF, .NET 8) launcher that shows a folder of shortcuts as a
 floating, rounded icon grid over your wallpaper — like tapping a folder on an
 iOS/macOS home screen — instead of opening File Explorer.
 
-![screenshot](docs/screenshot.png) <!-- add your own -->
+A small folder ("Favourites") shrinks to fit; a full one ("Games", 46 shortcuts)
+auto-fits into the same panel with no scrollbar — the tab pills stay put either way.
+
+![Favourites tab](docs/favourites.png)
+
+![Games tab](docs/games.png)
 
 ## What it does
 
