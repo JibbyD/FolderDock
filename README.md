@@ -7,9 +7,9 @@ iOS/macOS home screen — instead of opening File Explorer.
 A small folder ("Favourites") shrinks to fit; a full one ("Games", 46 shortcuts)
 auto-fits into the same panel with no scrollbar — the tab pills stay put either way.
 
-![Favourites tab](docs/favourites.png)
+![Favourites tab](docs/tab-favourites.png)
 
-![Games tab](docs/games.png)
+![Games tab](docs/tab-games.png)
 
 ## What it does
 
