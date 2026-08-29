@@ -1,0 +1,16 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# Publish output
+publish/
+
+# Runtime logs the app writes next to the exe
+icon_debug.log
+startup_debug.log
