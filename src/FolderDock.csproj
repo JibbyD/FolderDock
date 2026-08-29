@@ -6,8 +6,11 @@
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>FolderDock</RootNamespace>
+
+    <!-- The built file stays MyAppsFolder.exe so an existing install / desktop
+         shortcut keeps working. Change to FolderDock if you don't care. -->
     <AssemblyName>MyAppsFolder</AssemblyName>
-    <RootNamespace>MyAppsFolder</RootNamespace>
 
     <!-- Drop an AppIcon.ico next to this .csproj and uncomment the line below to
          give the built .exe a custom icon. -->

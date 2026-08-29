@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows;
 
-namespace MyAppsFolder
+namespace FolderDock
 {
     public partial class App : Application
     {

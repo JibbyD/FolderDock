@@ -1,4 +1,4 @@
-# MyAppsFolder
+# FolderDock
 
 A tiny Windows (WPF, .NET 8) launcher that shows a folder of shortcuts as a
 floating, rounded icon grid over your wallpaper — like tapping a folder on an
@@ -31,22 +31,23 @@ iOS/macOS home screen — instead of opening File Explorer.
 Needs the **.NET 8 SDK** (`dotnet --version` should print `8.x`).
 
 ```sh
-dotnet build MyAppsFolder/MyAppsFolder.csproj -c Release
+dotnet build src/FolderDock.csproj -c Release
 ```
 
 ### Standalone .exe (no .NET install required on the target machine)
 
 ```sh
-dotnet publish MyAppsFolder/MyAppsFolder.csproj -c Release -r win-x64 --self-contained true
+dotnet publish src/FolderDock.csproj -c Release -r win-x64 --self-contained true
 ```
 
-Output: `MyAppsFolder/bin/Release/net8.0-windows/win-x64/publish/`. Keep the whole
+Output: `src/bin/Release/net8.0-windows/win-x64/publish/`. Keep the whole
 `publish` folder together; make a shortcut to `MyAppsFolder.exe` and put that on
-your desktop.
+your desktop. (The exe keeps the name `MyAppsFolder.exe` — see the note in the
+`.csproj`.)
 
 ## Configure
 
-Edit the two lines at the top of [`App.xaml.cs`](MyAppsFolder/App.xaml.cs):
+Edit the two lines at the top of [`App.xaml.cs`](src/App.xaml.cs):
 
 ```csharp
 public static readonly string FolderPath =
@@ -68,5 +69,5 @@ Point `FolderPath` anywhere you like (e.g. a fixed path, or
 
 ## Optional: app icon
 
-Drop an `AppIcon.ico` next to `MyAppsFolder.csproj` and uncomment the
+Drop an `AppIcon.ico` next to `src/FolderDock.csproj` and uncomment the
 `<ApplicationIcon>` line in the `.csproj` to give the built `.exe` a custom icon.

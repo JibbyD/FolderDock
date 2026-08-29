@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace MyAppsFolder
+namespace FolderDock
 {
     // Enables the same real, GPU-composited blur-behind effect Windows itself
     // uses for the Start menu and other flyouts, via the undocumented
