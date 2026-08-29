@@ -26,6 +26,61 @@ iOS/macOS home screen — instead of opening File Explorer.
 - **Drag a shortcut onto the .exe** (or a shortcut to it) and it's added to the
   folder silently instead of opening the popup.
 
+## How to use
+
+### First run
+
+Make a shortcut to the built `MyAppsFolder.exe`, put it on your desktop (or pin
+it), and double-click. The folder it reads — `%APPDATA%\MyApps` — starts empty,
+so the first run just tells you where to put things.
+
+### Adding / removing apps
+
+Any of these:
+
+- Open `%APPDATA%\MyApps` in Explorer (`Win`+`R` → `%APPDATA%\MyApps`) and drop
+  `.lnk` / `.url` shortcuts in.
+- **Drag a shortcut onto the .exe** (or onto your desktop shortcut to it) — it's
+  copied into the folder and a short confirmation shows instead of the popup.
+- Open the popup, pick a tab, click the **📁** button next to the **✕** — it
+  opens *that tab's* folder in Explorer, ready for you to drag shortcuts in.
+
+To remove an app, delete its shortcut from the folder.
+
+### Tabs = subfolders
+
+Every subfolder of `%APPDATA%\MyApps` becomes a tab:
+
+```
+%APPDATA%\MyApps\
+├── Discord.lnk          ← loose shortcuts get a first tab (named "My Apps")
+├── 1 Favourites\        → tab: Favourites
+├── 2 Games\             → tab: Games
+└── 3 Applications\      → tab: Applications
+```
+
+- **The folder name is the tab label.**
+- **A leading number sets the order** and is stripped from the label. `1 Games`,
+  `2. Work`, `10) Media`, `3 - Fun` all work — the number may be followed by a
+  `.`, `)`, `-`, `_`, or a space.
+- Folders **without** a number come after the numbered ones, alphabetically.
+- Rename or renumber a folder whenever you like — it takes effect the next time
+  you open the popup, no rebuild needed.
+
+### Opening and closing
+
+- **Click an icon** to launch it — the popup then closes. It's a full click
+  (press *and* release on the same icon), so a stray press can't fire something.
+- **Switch tabs** by clicking a pill (also a full click).
+- **Close** with `Esc`, a click anywhere outside the panel, the **✕**, or by
+  clicking away to another window.
+
+### Icons
+
+Each shortcut shows its real icon at up to 256px. If one can't be resolved you
+get a coloured tile with the app's first letter, and the reason is written to
+`icon_debug.log` next to the exe.
+
 ## Build
 
 Needs the **.NET 8 SDK** (`dotnet --version` should print `8.x`).
