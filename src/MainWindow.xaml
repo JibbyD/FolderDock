@@ -1,3 +1,23 @@
+<!--
+  MainWindow.xaml — the popup's layout.
+
+  Structure (outer → inner):
+
+    Window (Root)            full-screen, borderless, see-through
+    └ Grid (RootGrid)        catches clicks on empty space → close
+      └ StackPanel (PopupGroup)   the visible popup; scales+fades in
+        ├ Border             the dark tab bar
+        │  └ StackPanel      [ pills (TabBar) ] [ folder button 📁 ] [ close ✕ ]
+        └ Grid (CardArea)    fixed height so the pills never jump
+          ├ Border           shadow-only rectangle behind the card
+          └ Border (Card)    the tinted glass panel
+            └ ScrollViewer
+              └ ItemsControl (AppsGrid)   the icon grid (drop target for reordering)
+
+  Anything named x:Name="..." is referenced from MainWindow.xaml.cs.
+  {Binding X} pulls X from the current data object (a FolderTab or AppItem);
+  {Binding X, ElementName=Root} pulls it from the window (the FitGrid values).
+-->
 <Window x:Class="FolderDock.MainWindow"
         x:Name="Root"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -15,22 +35,42 @@
         TextOptions.TextFormattingMode="Display"
         TextOptions.TextRenderingMode="ClearType"
         RenderOptions.BitmapScalingMode="HighQuality">
+    <!-- Window attributes above, in plain terms:
+         WindowStyle=None + AllowsTransparency + Background=Transparent
+           → no title bar / border, and unpainted areas are see-through.
+         Topmost                → floats above other windows.
+         ShowInTaskbar=False    → no taskbar button.
+         WindowStartupLocation=Manual + ResizeMode=NoResize
+           → the code sets Left/Top/Width/Height; the user can't move/resize it.
+         The last four (UseLayoutRounding … HighQuality)
+           → snap to whole pixels and use the good text/image rasteriser, so
+             everything stays crisp on a transparent window. -->
 
+    <!-- RootGrid fills the whole screen. A left-click that reaches it (i.e. NOT
+         on the panel, which swallows its own clicks) closes the popup. -->
     <Grid x:Name="RootGrid" MouseLeftButtonDown="RootGrid_MouseLeftButtonDown">
 
         <!-- No full-screen dim and no blur: the live desktop wallpaper shows
              straight through. Only the panel itself carries a light tint. -->
 
+        <!-- PopupGroup = everything you actually see. Centred on screen. Starts
+             invisible (Opacity=0) and scaled to 60%; MainWindow_Loaded animates
+             it to full size + opacity. RenderTransformOrigin 0.5,0.5 = grow from
+             the centre. -->
         <StackPanel x:Name="PopupGroup"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Opacity="0"
                     RenderTransformOrigin="0.5,0.5">
             <StackPanel.RenderTransform>
+                <!-- The code animates this transform's ScaleX/ScaleY 0.6 → 1.0. -->
                 <ScaleTransform x:Name="PopupScale" ScaleX="0.6" ScaleY="0.6"/>
             </StackPanel.RenderTransform>
 
-            <!-- Tab bar: one pill per folder, plus the folder + close buttons -->
+            <!-- ── Tab bar ──────────────────────────────────────────────────
+                 Dark rounded strip. #66000000 = black at 40% alpha (the first
+                 two hex digits are the alpha). Clicks on it are swallowed by
+                 Card_MouseLeftButtonDown so it doesn't count as "click away". -->
             <Border Background="#66000000"
                     CornerRadius="22"
                     Padding="8,5"
@@ -38,6 +78,10 @@
                     Margin="0,0,0,16"
                     MouseLeftButtonDown="Card_MouseLeftButtonDown">
                 <StackPanel Orientation="Horizontal">
+
+                    <!-- The pills. ItemsSource is set in code to the list of
+                         FolderTabs; ItemsPanel lays them out in a horizontal row;
+                         ItemTemplate is how ONE pill looks. -->
                     <ItemsControl x:Name="TabBar">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -46,6 +90,10 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
+                                <!-- One pill. Colours come from the FolderTab
+                                     (TabBackground / TabForeground flip when it's
+                                     Selected). Down+Up handlers = act only on a
+                                     full click on the same pill. -->
                                 <Border Background="{Binding TabBackground}"
                                         CornerRadius="15"
                                         Padding="14,6"
@@ -61,6 +109,9 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <!-- 📁 button. &#xE838; is a glyph in the "Segoe MDL2 Assets"
+                         icon font (a folder). Opens the current tab's folder. -->
                     <TextBlock Text="&#xE838;"
                                FontFamily="Segoe MDL2 Assets"
                                ToolTip="Open this folder to add or remove apps"
@@ -70,6 +121,8 @@
                                VerticalAlignment="Center"
                                Cursor="Hand"
                                MouseLeftButtonDown="OpenFolder_MouseLeftButtonDown"/>
+
+                    <!-- ✕ close button. &#x2715; is the multiplication-X character. -->
                     <TextBlock Text="&#x2715;"
                                Foreground="#CCFFFFFF"
                                FontSize="13"
@@ -80,13 +133,16 @@
                 </StackPanel>
             </Border>
 
-            <!-- Fixed-height area: keeps the pills above from moving when the
-                 panel inside grows or shrinks to fit the selected folder. -->
+            <!-- CardArea is always _maxCardHeight tall (set in code). The Card
+                 inside is top-aligned and free to be shorter, so when a small
+                 tab shrinks the Card, only its bottom edge moves — the tab bar
+                 above stays exactly where it is. -->
             <Grid x:Name="CardArea">
 
-            <!-- Shadow layer: a DropShadowEffect rasterises whatever it's on, so
-                 it lives on its own empty rounded rectangle. Putting it on the
-                 Card itself would blur every icon and label inside it. -->
+            <!-- Shadow layer. A DropShadowEffect re-renders (rasterises) whatever
+                 element it's on, which would blur every icon and label. So the
+                 shadow lives on this separate empty rectangle that's sized to
+                 match the Card, sitting directly behind it. -->
             <Border VerticalAlignment="Top"
                     Width="{Binding ActualWidth, ElementName=Card}"
                     Height="{Binding ActualHeight, ElementName=Card}"
@@ -97,8 +153,9 @@
                 </Border.Effect>
             </Border>
 
-            <!-- The panel: light tint over the wallpaper, faint glass edge. No
-                 Effect here - keeps text and icons razor sharp. -->
+            <!-- The panel itself. #33000000 = black at 20% (the light tint over
+                 the wallpaper); #26FFFFFF = white at ~15% (the faint glass edge).
+                 No Effect on this one, on purpose — keeps text/icons sharp. -->
             <Border x:Name="Card"
                     VerticalAlignment="Top"
                     Background="#33000000"
@@ -108,9 +165,15 @@
                     Padding="30"
                     MouseLeftButtonDown="Card_MouseLeftButtonDown">
 
+                <!-- Scrollbars are hidden/disabled: FitGrid makes everything fit,
+                     so there's normally nothing to scroll. -->
                 <ScrollViewer x:Name="GridScroller"
                               VerticalScrollBarVisibility="Hidden"
                               HorizontalScrollBarVisibility="Disabled">
+
+                    <!-- The icon grid. ItemsSource is set in code to the selected
+                         tab's Items. AllowDrop + DragOver/Drop make it the target
+                         for drag-to-reorder. -->
                     <ItemsControl x:Name="AppsGrid"
                                   VerticalAlignment="Center"
                                   HorizontalAlignment="Center"
@@ -119,11 +182,23 @@
                                   Drop="AppsGrid_Drop">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
+                                <!-- Equal-sized cells; column count comes from the
+                                     window's GridColumns (set by FitGrid). -->
                                 <UniformGrid Columns="{Binding GridColumns, ElementName=Root}"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
+
+                        <!-- How ONE app tile looks. Bound to an AppItem. -->
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
+                                <!-- The whole tile. Width/Opacity are data-bound
+                                     (TileWidth from the window; TileOpacity from
+                                     the AppItem — it fades while being dragged).
+                                     Background=Transparent so the empty area
+                                     around the icon still receives mouse events.
+                                     Three mouse handlers: Down (remember it),
+                                     Up (launch if it was a clean click),
+                                     Move (start a drag once it moves far enough). -->
                                 <StackPanel Width="{Binding TileWidth, ElementName=Root}"
                                             Margin="11,10"
                                             Cursor="Hand"
@@ -132,12 +207,19 @@
                                             MouseLeftButtonDown="AppIcon_Down"
                                             MouseLeftButtonUp="AppIcon_Up"
                                             MouseMove="AppIcon_Move">
+
+                                    <!-- The icon square. Background is transparent
+                                         for a real icon, or the palette colour for
+                                         the letter fallback (TileBackground). -->
                                     <Border Width="{Binding IconSize, ElementName=Root}"
                                             Height="{Binding IconSize, ElementName=Root}"
                                             CornerRadius="16"
                                             Background="{Binding TileBackground}"
                                             HorizontalAlignment="Center">
                                         <Grid>
+                                            <!-- Fallback: the first letter. Only
+                                                 visible when there's no real icon
+                                                 (FallbackVisibility). -->
                                             <TextBlock Text="{Binding FallbackText}"
                                                        Visibility="{Binding FallbackVisibility}"
                                                        Foreground="White"
@@ -145,6 +227,8 @@
                                                        FontWeight="Bold"
                                                        HorizontalAlignment="Center"
                                                        VerticalAlignment="Center"/>
+                                            <!-- The real icon. Only visible when we
+                                                 have one (IconVisibility). -->
                                             <Image Source="{Binding Icon}"
                                                    Visibility="{Binding IconVisibility}"
                                                    Width="{Binding IconSize, ElementName=Root}"
@@ -153,9 +237,12 @@
                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                                         </Grid>
                                     </Border>
-                                    <!-- Crisp label: a hard 1px dark copy behind
-                                         the white text for legibility over any
-                                         wallpaper, without a blurring Effect. -->
+
+                                    <!-- The label. Two copies of the same text: a
+                                         dark one offset by 1px, then the white one
+                                         on top — a cheap hard drop-shadow that
+                                         stays readable over any wallpaper without
+                                         a blurring Effect. -->
                                     <Grid Margin="0,8,0,0">
                                         <TextBlock Text="{Binding Name}"
                                                    FontSize="12"
